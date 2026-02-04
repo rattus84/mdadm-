@@ -95,7 +95,7 @@ drwxr-xr-x 2 root root   4096 фев  4 09:41 apt
 -rw-r----- 1 root root  71546 фев  4 09:41 cloud-init.log
 -rw-r----- 1 root root   4506 фев  4 09:41 cloud-init-output.log
 
-#Помечаю диск как сбойны
+#Помечаю диск как сбойный
  root@yay:/home/yay# mdadm --manage /dev/md0 --fail /dev/sda
 mdadm: set /dev/sda faulty in /dev/md0
 root@yay:/home/yay# mdadm -D /dev/md0
@@ -360,6 +360,7 @@ drwxr-xr-x 2 root root   4096 фев  4 11:14 apt
 -rw-r----- 1 root root      0 фев  4 11:14 btmp
 -rw-r----- 1 root root  71546 фев  4 11:14 cloud-init.log
 -rw-r----- 1 root root   4506 фев  4 11:14 cloud-init-output.log
+
 
 
 
