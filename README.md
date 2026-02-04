@@ -3,7 +3,10 @@
 
 1. Первая чать дз собрать RAID1 и произвести замену одного диска
 
+
 #Подключил два диска sda, sdc в на гипревизоре
+
+
 root@yay:/home/yay# lsblk
 NAME                      MAJ:MIN RM  SIZE RO TYPE  MOUNTPOINTS
 fd0                         2:0    1    4K  0 disk
