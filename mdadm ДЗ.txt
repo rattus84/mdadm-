@@ -222,7 +222,7 @@ Consistency Policy : resync
 
 
 
-2. Вторая часть создаю GPT
+2. Вторая часть создаю GPT и разделы
 
 #Отмантирую диск с RAID1
 root@yay:/home/yay# umount /mnt/01
@@ -360,4 +360,5 @@ drwxr-xr-x 2 root root   4096 фев  4 11:14 apt
 -rw-r----- 1 root root      0 фев  4 11:14 btmp
 -rw-r----- 1 root root  71546 фев  4 11:14 cloud-init.log
 -rw-r----- 1 root root   4506 фев  4 11:14 cloud-init-output.log
+
 
