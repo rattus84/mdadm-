@@ -1,2 +1,370 @@
 # mdadm-
 Домашнее задание mdadm создание RAID1
+
+1. Первая чать дз собрать RAID1 и произвести замену одного диска
+
+#Подключил два диска sda, sdc в на гипревизоре
+root@yay:/home/yay# lsblk
+NAME                      MAJ:MIN RM  SIZE RO TYPE  MOUNTPOINTS
+fd0                         2:0    1    4K  0 disk
+sda                         8:0    0    1G  0 disk
+└─md0                       9:0    0 1022M  0 raid1
+sdb                         8:16   0   80G  0 disk
+├─sdb1                      8:17   0    1M  0 part
+├─sdb2                      8:18   0    2G  0 part  /boot
+└─sdb3                      8:19   0   78G  0 part
+  └─ubuntu--vg-ubuntu--lv 252:0    0   39G  0 lvm   /
+sdc                         8:32   0    1G  0 disk
+└─md0                       9:0    0 1022M  0 raid1
+
+#Создаю RAID1 . Скрипт по созданию во ложении
+mdadm --create /dev/md0 -l 1 -n 2 /dev/sda /dev/sdc
+
+#Проверяю что создан RAID1
+root@yay:/home/yay# cat /proc/mdstat
+Personalities : [raid0] [raid1] [raid6] [raid5] [raid4] [raid10]
+md0 : active raid1 sdc[1] sda[0]
+      1046528 blocks super 1.2 [2/2] [UU]
+
+#Подробно
+mdadm -D /dev/md0
+/dev/md0:
+           Version : 1.2
+     Creation Time : Wed Feb  4 07:58:41 2026
+        Raid Level : raid1
+        Array Size : 1046528 (1022.00 MiB 1071.64 MB)
+     Used Dev Size : 1046528 (1022.00 MiB 1071.64 MB)
+      Raid Devices : 2
+     Total Devices : 2
+       Persistence : Superblock is persistent
+
+       Update Time : Wed Feb  4 07:58:46 2026
+             State : clean
+    Active Devices : 2
+   Working Devices : 2
+    Failed Devices : 0
+     Spare Devices : 0
+
+Consistency Policy : resync
+
+              Name : yay:0  (local to host yay)
+              UUID : 2d71a53c:2639b83a:ed67a2f7:c44c15b0
+            Events : 17
+
+    Number   Major   Minor   RaidDevice State
+       0       8        0        0      active sync   /dev/sda
+       1       8       32        1      active sync   /dev/sdc
+
+
+#Создаю файловую систему
+mkfs.ext4 /dev/md0
+mke2fs 1.47.0 (5-Feb-2023)
+Discarding device blocks: done
+Creating filesystem with 261632 4k blocks and 65408 inodes
+Filesystem UUID: 39cad76c-1e03-4738-a089-366ceba2f71f
+Superblock backups stored on blocks:
+        32768, 98304, 163840, 229376
+
+Allocating group tables: done
+Writing inode tables: done
+Creating journal (4096 blocks): done
+Writing superblocks and filesystem accounting information: done
+
+#Создаю директорию
+root@yay:/home/yay#mkdir /mnt/01
+
+#Монтирую в каталог /mnt/01
+root@yay:/home/yay# mount /dev/md0 /mnt/01
+
+
+#Копирую файлы в раздел /mnt/01
+root@yay:/home/yay# cp -r /var/log/* /mnt/01/
+
+#Проверяю что на разделе создались файлы
+root@yay:/home/yay# ls -l /mnt/01/
+total 1576
+-rw-r--r-- 1 root root  34926 фев  4 09:41 alternatives.log
+-rw-r----- 1 root root      0 фев  4 09:41 apport.log
+drwxr-xr-x 2 root root   4096 фев  4 09:41 apt
+-rw-r----- 1 root root  45247 фев  4 09:41 auth.log
+-rw-r--r-- 1 root root  61229 фев  4 09:41 bootstrap.log
+-rw-r----- 1 root root      0 фев  4 09:41 btmp
+-rw-r----- 1 root root  71546 фев  4 09:41 cloud-init.log
+-rw-r----- 1 root root   4506 фев  4 09:41 cloud-init-output.log
+
+#Помечаю диск как сбойны
+ root@yay:/home/yay# mdadm --manage /dev/md0 --fail /dev/sda
+mdadm: set /dev/sda faulty in /dev/md0
+root@yay:/home/yay# mdadm -D /dev/md0
+/dev/md0:
+           Version : 1.2
+     Creation Time : Wed Feb  4 07:58:41 2026
+        Raid Level : raid1
+        Array Size : 1046528 (1022.00 MiB 1071.64 MB)
+     Used Dev Size : 1046528 (1022.00 MiB 1071.64 MB)
+      Raid Devices : 2
+     Total Devices : 2
+       Persistence : Superblock is persistent
+
+       Update Time : Wed Feb  4 09:43:48 2026
+             State : clean, degraded
+    Active Devices : 1
+   Working Devices : 1
+    Failed Devices : 1
+     Spare Devices : 0
+
+Consistency Policy : resync
+
+              Name : yay:0  (local to host yay)
+              UUID : 2d71a53c:2639b83a:ed67a2f7:c44c15b0
+            Events : 19
+
+    Number   Major   Minor   RaidDevice State
+       -       0        0        0      removed
+       1       8       32        1      active sync   /dev/sdc
+
+       0       8        0        -      faulty   /dev/sda
+
+#Проверяю что файлы доступны на оставшемся диске
+root@yay:/home/yay# ls -l /mnt/01/
+total 1576
+-rw-r--r-- 1 root root  34926 фев  4 09:41 alternatives.log
+-rw-r----- 1 root root      0 фев  4 09:41 apport.log
+drwxr-xr-x 2 root root   4096 фев  4 09:41 apt
+-rw-r----- 1 root root  45247 фев  4 09:41 auth.log
+-rw-r--r-- 1 root root  61229 фев  4 09:41 bootstrap.log
+-rw-r----- 1 root root      0 фев  4 09:41 btmp
+-rw-r----- 1 root root  71546 фев  4 09:41 cloud-init.log
+-rw-r----- 1 root root   4506 фев  4 09:41 cloud-init-output.log
+#Удаляю диск для замены из массива
+root@yay:/home/yay# mdadm /dev/md0 --remove /dev/sda
+mdadm: hot removed /dev/sda from /dev/md0
+root@yay:/home/yay# mdadm -D /dev/md0
+/dev/md0:
+           Version : 1.2
+     Creation Time : Wed Feb  4 07:58:41 2026
+        Raid Level : raid1
+        Array Size : 1046528 (1022.00 MiB 1071.64 MB)
+     Used Dev Size : 1046528 (1022.00 MiB 1071.64 MB)
+      Raid Devices : 2
+     Total Devices : 1
+       Persistence : Superblock is persistent
+
+       Update Time : Wed Feb  4 09:46:41 2026
+             State : clean, degraded
+    Active Devices : 1
+   Working Devices : 1
+    Failed Devices : 0
+     Spare Devices : 0
+
+Consistency Policy : resync
+
+              Name : yay:0  (local to host yay)
+              UUID : 2d71a53c:2639b83a:ed67a2f7:c44c15b0
+            Events : 20
+
+    Number   Major   Minor   RaidDevice State
+       -       0        0        0      removed
+       1       8       32        1      active sync   /dev/sdc
+
+#Зачищаю диск который убрал
+root@yay:/home/yay# sudo dd if=/dev/zero of=/dev/sda
+dd: writing to '/dev/sda': No space left on device
+2097153+0 records in
+2097152+0 records out
+1073741824 bytes (1,1 GB, 1,0 GiB) copied, 12,1962 s, 88,0 MB/s
+
+#Зачищая на всякий случай метаданные
+root@yay:/home/yay# mdadm --zero-superblock /dev/sda
+mdadm: Unrecognised md component device - /dev/sda
+
+#Добовляю как чистый диск в массив в это время будет ребилд
+root@yay:/home/yay# mdadm /dev/md0 --add /dev/sda
+mdadm: added /dev/sda
+root@yay:/home/yay# mdadm -D /dev/md0
+/dev/md0:
+           Version : 1.2
+     Creation Time : Wed Feb  4 07:58:41 2026
+        Raid Level : raid1
+        Array Size : 1046528 (1022.00 MiB 1071.64 MB)
+     Used Dev Size : 1046528 (1022.00 MiB 1071.64 MB)
+      Raid Devices : 2
+     Total Devices : 2
+       Persistence : Superblock is persistent
+
+       Update Time : Wed Feb  4 09:51:53 2026
+             State : clean
+    Active Devices : 2
+   Working Devices : 2
+    Failed Devices : 0
+     Spare Devices : 0
+
+Consistency Policy : resync
+
+              Name : yay:0  (local to host yay)
+              UUID : 2d71a53c:2639b83a:ed67a2f7:c44c15b0
+            Events : 40
+
+    Number   Major   Minor   RaidDevice State
+       2       8        0        0      active sync   /dev/sda
+       1       8       32        1      active sync   /dev/sdc
+
+
+
+2. Вторая часть создаю GPT
+
+#Отмантирую диск с RAID1
+root@yay:/home/yay# umount /mnt/01
+
+#Создаю на нем разделы
+root@yay:/home/yay# fdisk /dev/md0
+
+Welcome to fdisk (util-linux 2.39.3).
+Changes will remain in memory only, until you decide to write them.
+Be careful before using the write command.
+
+The device contains 'ext4' signature and it will be removed by a write command. See fdisk(8) man page and --wipe option for more details.
+
+Device does not contain a recognized partition table.
+Created a new DOS (MBR) disklabel with disk identifier 0x447da94b.
+
+#Смотрю если разделы на диске
+Command (m for help): p
+Disk /dev/md0: 1022 MiB, 1071644672 bytes, 2093056 sectors
+Units: sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 4096 bytes
+I/O size (minimum/optimal): 4096 bytes / 4096 bytes
+Disklabel type: dos
+Disk identifier: 0x447da94b
+
+#Создаю таблицу GPT с затиранием данных
+Command (m for help): g
+Created a new GPT disklabel (GUID: B1B139E2-57BA-42BF-BB70-2C89AAB5C928).
+The device contains 'ext4' signature and it will be removed by a write command. See fdisk(8) man page and --wipe option for more details.
+#Делаю два раздела и сохраню
+Command (m for help): n
+Partition number (1-128, default 1):
+First sector (2048-2093022, default 2048):
+Last sector, +/-sectors or +/-size{K,M,G,T,P} (2048-2093022, default 2091007): +200M
+
+Created a new partition 1 of type 'Linux filesystem' and of size 200 MiB.
+
+Command (m for help): n
+Partition number (2-128, default 2):
+First sector (411648-2093022, default 411648):
+Last sector, +/-sectors or +/-size{K,M,G,T,P} (411648-2093022, default 2091007): +500M
+
+Created a new partition 2 of type 'Linux filesystem' and of size 500 MiB.
+
+Command (m for help): p
+Disk /dev/md0: 1022 MiB, 1071644672 bytes, 2093056 sectors
+Units: sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 4096 bytes
+I/O size (minimum/optimal): 4096 bytes / 4096 bytes
+Disklabel type: gpt
+Disk identifier: B1B139E2-57BA-42BF-BB70-2C89AAB5C928
+
+Device      Start     End Sectors  Size Type
+/dev/md0p1   2048  411647  409600  200M Linux filesystem
+/dev/md0p2 411648 1435647 1024000  500M Linux filesystem
+
+Command (m for help): w
+The partition table has been altered.
+Calling ioctl() to re-read partition table.
+Syncing disks.
+
+#Проверяю созданые разделы
+root@yay:/home/yay# cat /proc/partitions
+major minor  #blocks  name
+
+   8        0    1048576 sda
+   2        0          4 fd0
+   8       32    1048576 sdc
+   8       16   83886080 sdb
+   8       17       1024 sdb1
+   8       18    2097152 sdb2
+   8       19   81785856 sdb3
+ 252        0   40890368 dm-0
+   9        0    1046528 md0
+ 259        2     204800 md0p1
+ 259        3     512000 md0p2
+
+#Создаю файловую систему на созданых разделах
+root@yay:/home/yay# mkfs.ext4 /dev/md0p1
+mke2fs 1.47.0 (5-Feb-2023)
+Discarding device blocks: done
+Creating filesystem with 51200 4k blocks and 51200 inodes
+Filesystem UUID: 5e45edb3-eb0e-4620-a898-a6b33a668f34
+Superblock backups stored on blocks:
+        32768
+Allocating group tables: done
+Writing inode tables: done
+Creating journal (4096 blocks): done
+Writing superblocks and filesystem accounting information: done
+
+root@yay:/home/yay# mkfs.ext4 /dev/md0p2
+mke2fs 1.47.0 (5-Feb-2023)
+Discarding device blocks: done
+Creating filesystem with 128000 4k blocks and 128000 inodes
+Filesystem UUID: b643b8ec-ab92-4cfa-9df6-4708a9490afa
+Superblock backups stored on blocks:
+        32768, 98304
+Allocating group tables: done
+Writing inode tables: done
+Creating journal (4096 blocks): done
+Writing superblocks and filesystem accounting information: done
+
+#Создаю каталоги под разделы
+root@yay:/home/yay# mkdir /mnt/md0
+root@yay:/home/yay# mkdir /mnt/md02
+
+#Монтирую
+root@yay:/home/yay# mount /dev/md0p1 /mnt/md0
+root@yay:/home/yay# mount /dev/md0p2 /mnt/md02
+
+
+#Проверяю созданые разделы
+root@yay:/home/yay# df -hT
+Filesystem                        Type   Size  Used Avail Use% Mounted on
+tmpfs                             tmpfs  392M  1,2M  391M   1% /run
+/dev/mapper/ubuntu--vg-ubuntu--lv ext4    39G  6,5G   30G  18% /
+tmpfs                             tmpfs  2,0G     0  2,0G   0% /dev/shm
+tmpfs                             tmpfs  5,0M     0  5,0M   0% /run/lock
+/dev/sdb2                         ext4   2,0G  100M  1,7G   6% /boot
+tmpfs                             tmpfs  392M   12K  392M   1% /run/user/1000
+/dev/md0p1                        ext4   172M   24K  158M   1% /mnt/md0
+/dev/md0p2                        ext4   452M   24K  417M   1% /mnt/md02
+
+#Копирую файлы на диск
+root@yay:/home/yay# cp -r /var/log/* /mnt/md0/
+
+#Проверяю созданые файлы
+root@yay:/home/yay# ls -l /mnt/md0
+total 1596
+-rw-r--r-- 1 root root  34926 фев  4 11:14 alternatives.log
+-rw-r----- 1 root root      0 фев  4 11:14 apport.log
+drwxr-xr-x 2 root root   4096 фев  4 11:14 apt
+-rw-r----- 1 root root  50909 фев  4 11:14 auth.log
+-rw-r--r-- 1 root root  61229 фев  4 11:14 bootstrap.log
+-rw-r----- 1 root root      0 фев  4 11:14 btmp
+-rw-r----- 1 root root  71546 фев  4 11:14 cloud-init.log
+-rw-r----- 1 root root   4506 фев  4 11:14 cloud-init-output.log
+
+
+
+
+
+       
+
+
+
+
+
+
+
+
+       
+
+
+
+
