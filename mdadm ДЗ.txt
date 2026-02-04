@@ -4,7 +4,7 @@
 1. Первая чать дз собрать RAID1 и произвести замену одного диска
 
 
-#Подключил два диска sda, sdc в на гипревизоре
+#Подключил два диска sda, sdc в на гипервизоре
 
 root@yay:/home/yay# lsblk
 NAME                      MAJ:MIN RM  SIZE RO TYPE  MOUNTPOINTS
@@ -360,5 +360,6 @@ drwxr-xr-x 2 root root   4096 фев  4 11:14 apt
 -rw-r----- 1 root root      0 фев  4 11:14 btmp
 -rw-r----- 1 root root  71546 фев  4 11:14 cloud-init.log
 -rw-r----- 1 root root   4506 фев  4 11:14 cloud-init-output.log
+
 
 
