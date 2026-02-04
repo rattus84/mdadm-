@@ -17,7 +17,8 @@ sdb                         8:16   0   80G  0 disk
 sdc                         8:32   0    1G  0 disk
 └─md0                       9:0    0 1022M  0 raid1
 
-#Создаю RAID1 . Скрипт по созданию во ложении
+#Создаю RAID1 . Скрипт по созданию во ложении "create R1.sh"
+
 mdadm --create /dev/md0 -l 1 -n 2 /dev/sda /dev/sdc
 
 #Проверяю что создан RAID1
