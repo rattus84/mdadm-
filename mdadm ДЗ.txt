@@ -212,7 +212,30 @@ Consistency Policy : resync
        2       8        0        0      active sync   /dev/sda
        1       8       32        1      active sync   /dev/sdc
 
+#Опционально
+# Удалить каждый диск из массива
+sudo mdadm --fail /dev/md0 /dev/sdb
+sudo mdadm --remove /dev/md0 /dev/sdc
+# Повторить для всех дисков
 
+# Остановить массив
+sudo mdadm --stop /dev/md0
+
+# Очистить метаданные
+sudo wipefs -a /dev/sdb
+# Или
+sudo mdadm --zero-superblock /dev/sdb
+
+
+или
+# Остановить массив
+sudo mdadm --stop /dev/md0
+
+# Удалить массив (очистить суперблоки)
+sudo mdadm --remove /dev/md0
+
+# Очистить суперблоки на всех дисках
+sudo mdadm --zero-superblock /dev/sd[bc]   # замените на ваши диски
 
 
 
